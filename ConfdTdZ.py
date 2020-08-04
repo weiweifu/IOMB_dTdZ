@@ -30,9 +30,11 @@ def GetSlope(v):
       return i0,ic,vdiff
 
     i0,ic,vdiff = _dindx(v)
+    dTdZ = v.data[i0,...]-v.data[ic,...]
+    dTdZ.shape = (1,) + dTdZ.shape
     slope = Variable(
-                     # time = [0.],
-                     data = v.data[i0,...]-v.data[ic,...],
+                     time = np.asarray([0.]),
+                     data = dTdZ,
                      lat       = v.lat,
                      lat_bnds  = v.lat_bnds,
                      lon       = v.lon,
