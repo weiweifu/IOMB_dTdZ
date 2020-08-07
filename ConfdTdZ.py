@@ -34,7 +34,8 @@ def GetSlope(v):
     dTdZ.shape = (1,) + dTdZ.shape
     
     slope = Variable(
-                     time = np.asarray([0.]),
+                     time = np.asarray([0.5]),
+                     time_bnds = np.asarray([[0.,1.]]),
                      data = dTdZ,
                      lat       = v.lat,
                      lat_bnds  = v.lat_bnds,
