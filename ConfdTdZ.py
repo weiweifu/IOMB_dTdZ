@@ -109,7 +109,8 @@ def GetSlope(v):
 
     i0,ic,vdiff = _dindx(v)
     with np.errstate(under='ignore'):
-        dTdZ = (v.data[i0,...]-v.data[ic,...])/vdiff*1e3
+        # dTdZ = (v.data[i0,...]-v.data[ic,...])/vdiff*1e3
+        dTdZ = sc_fit(v)
     dTdZ.shape = (1,) + dTdZ.shape
     
     slope = Variable(
