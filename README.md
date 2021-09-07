@@ -6,15 +6,15 @@
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/weiweifu/repo.svg?style=for-the-badge
+[contributors-shield]: https://img.shields.io/github/contributors/weiweifu/IOMB_dTdZ.svg?style=for-the-badge
 [contributors-url]: https://github.com/weiweifu/IOMB_dTdZ/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/weiweifu/repo.svg?style=for-the-badge
+[forks-shield]: https://img.shields.io/github/forks/weiweifu/IOMB_dTdZ.svg?style=for-the-badge
 [forks-url]: https://github.com/weiweifu/IOMB_dTdZ/network/members
-[stars-shield]: https://img.shields.io/github/stars/weiweifu/repo.svg?style=for-the-badge
+[stars-shield]: https://img.shields.io/github/stars/weiweifu/IOMB_dTdZ.svg?style=for-the-badge
 [stars-url]: https://github.com/weiweifu/IOMB_dTdZ/stargazers
-[issues-shield]: https://img.shields.io/github/issues/weiweifu/repo.svg?style=for-the-badge
+[issues-shield]: https://img.shields.io/github/issues/weiweifu/IOMB_dTdZ.svg?style=for-the-badge
 [issues-url]: https://github.com/weiweifu/IOMB_dTdZ/issues
-[license-shield]: https://img.shields.io/github/license/weiweifu/repo.svg?style=for-the-badge
+[license-shield]: https://img.shields.io/github/license/weiweifu/IOMB_dTdZ.svg?style=for-the-badge
 [license-url]: https://github.com/weiweifu/IOMB_dTdZ/blob/master/LICENSE.txt
 
 <!-- PROJECT LOGO -->
