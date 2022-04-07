@@ -21,7 +21,7 @@
 <br />
 <p align="center">
   <a href="https://github.com/weiweifu/IOMB_dTdZ">
-    <img src="https://www.ilamb.org/meetings/washington2016/2016_ILAMB_Report_cover_small.jpg" alt="Logo" width="200" height="140">
+    <img src="https://climatemodeling.science.energy.gov/system/files/private/projects/images/X1700-HOFFMAN-AM-Logo%203-02.png" alt="Logo" width="200" height="140">
   </a>
   <h3 align="center">International Ocean Model Benchmarking </h3>
   <p align="center">
