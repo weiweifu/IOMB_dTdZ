@@ -1,0 +1,167 @@
+import os,importlib
+import copy,ntpath
+from scipy.io import savemat, loadmat
+from sklearn.neighbors import KernelDensity
+import scipy.stats as ss
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.basemap import Basemap, shiftgrid, cm
+from netCDF4 import Dataset
+import matplotlib as mpl
+import h5py
+import xarray as xr
+# import hdf5storage
+import cmocean as cmo
+import myfuncs as mf
+importlib.reload(mf)
+# from myfuncs import rsmth, rsmth2,popgrid, CreatGrid, plotxy 
+# from myfuncs import dens, drhodt, drhods, plt_mon
+from matplotlib.patches import Rectangle
+from ILAMB.Variable import Variable
+import collections
+from scipy.interpolate import interp1d 
+import pandas as pd
+
+def plotz(ocim=None,ogru=None,dich=None,dicp=None,cmip=6,wrt=None,smth=None,r_0=None):
+  regs=['sGLB','sATL','sIND','sPAC','sSO']
+  if cmip == 6:
+    tL={'1994s':slice(14,28),'1980s':slice(0,10),'1990s':slice(10,20),'2000s':slice(20,30)}
+  else:
+    # tL={'1994s':slice(14,26),'1980s':slice(0,10),'1990s':slice(10,20),'2000s':slice(20,30)}
+    tL={'1994s':slice(14,26),'1980s':slice(0,10),'1990s':slice(10,20),'2000s':slice(20,30)}
+  cols = mycols()
+  dicinv = {}
+
+  dich = collections.OrderedDict(sorted(dich.items()))
+  plt.close('all')
+  # fig, ax = plt.subplots(nrows=1,ncols=3,figsize=(8,3))
+  fig, ax = plt.subplots(nrows=1,ncols=len(regs),figsize=(13,3.5))
+  fig.tight_layout()
+
+  cnt = 0
+  sf = 1
+  sl = -1
+  tupleA = ()
+  for k,v in dich.items():
+    dicinv[k] = []
+    # if 'cm' in k:
+    print('now model ',k)
+    if v['info'][5] == 'gr':
+      # dic = np.roll(v['dissic'],180,axis=-1)*1e3
+      dic = (v[v['info'][0]][tL['1994s']]-dicp[k][dicp[k]['info'][0]][tL['1994s']])*1e3 # to mmol/m3
+    else:
+      dic = (v[v['info'][0]][tL['1994s']]-dicp[k][dicp[k]['info'][0]][tL['1994s']])*1e3 # to mmol/m3
+
+    sdep = v['lev_bnds'][:,1] - v['lev_bnds'][:,0]
+    # find the index for 3000 m
+    i3000 = np.argmin(abs(v['lev']-3000))
+    print('level ',i3000,' at the depth of ',v['lev'][i3000])
+    d1 = slice(0,i3000+1) # cmip 0-3000m
+    # tmp2d = (dic[sl:,...].mean(axis=0)*sdep[:,None,None]*v['area'][None,:,:]).sum()/1e3*12/1e15
+    # tmp2d0 = (dic[0:sf:,...].mean(axis=0)*sdep[:,None,None]*v['area'][None,:,:]).sum()/1e3*12/1e15
+    tmp2d = (dic[sl:,...].mean(axis=0)*sdep[:,None,None]*v['area'][None,:,:]*ocim['sGLB']).sum()/1e3*12/1e15
+    tmp2d0 = (dic[0:sf:,...].mean(axis=0)*sdep[:,None,None]*v['area'][None,:,:]*ocim['sGLB']).sum()/1e3*12/1e15
+    print(k+' total anthro carbon is ',tmp2d-tmp2d0)
+    dicinv[k].append(tmp2d-tmp2d0)
+
+    tmp2e = (dic[sl:,...].mean(axis=0)*sdep[:,None,None]*ocim['sGLB']).sum(axis=0)/1e3
+    tmp2e0 = (dic[0:sf:,...].mean(axis=0)*sdep[:,None,None]*ocim['sGLB']).sum(axis=0)/1e3
+    if smth is None:
+      dif = tmp2e - tmp2e0
+    else:
+      dif = smth9(tmp2e - tmp2e0,sigma_y=2,sigma_x=2)
+    if wrt is not None:
+      if r_0 is None:
+        iomb_dif = dif
+      else:
+        print('Caution: negative values are replaced')
+        iomb_dif = np.where(dif<0,0.0,dif)
+      if cmip == 6:
+        outf = '/DFS-L/SCRATCH/moore/weiweif/IOMB_data/MODELS/'+k+'/'+'cant_inv_'+k+'.nc'
+      else:
+        outf = '/DFS-L/SCRATCH/moore/weiweif/IOMB_CMIP5/MODELS/'+k+'/'+'cant_inv_'+k+'.nc'
+      tonc_inv(outf,ocim['slat'][:,0],ocim['slon'][0,:],iomb_dif)
+    else:
+      iomb_dif = 0
+    tupleA = tupleA + (iomb_dif,)
+
+    for l,w in enumerate(regs):
+      print('now in '+w+' index '+str(l))
+      cols = mycols()
+      if w == 'sGLB':
+        tmp = ((dic[sl:,...].mean(axis=0))).mean(axis=(1,2))  
+        tmp0 = (dic[0,...]).mean(axis=(1,2))
+      else:
+        tmp = ((dic[sl:,...].mean(axis=0))*ocim[w]).mean(axis=(1,2))  
+        tmp0 = (dic[0,...]*ocim[w]).mean(axis=(1,2))
+        tmp2d = (dic[sl:,...].mean(axis=0)*sdep[:,None,None]*v['area'][None,:,:]*ocim[w]).sum()/1e3*12/1e15
+        tmp2d0 = (dic[0:sf,...].mean(axis=0)*sdep[:,None,None]*v['area'][None,:,:]*ocim[w]).sum()/1e3*12/1e15
+        dicinv[k].append(tmp2d-tmp2d0)
+      ax[l].plot(tmp-tmp0,-1*v['lev'],color=cols[cnt],label=k)
+      # ax[l].set_ylim(ylim[::-1])
+    cnt = cnt + 1
+
+  enxy = np.ma.stack(tupleA,axis=0) 
+  if wrt is not None:
+      outf = '/DFS-L/SCRATCH/moore/weiweif/IOMB_data/MODELS/meanCMIP'+str(cmip)+'/'+'cant_inv_meanCMIP.nc'
+      tonc_inv(outf,ocim['slat'][:,0],ocim['slon'][0,:],enxy.mean(axis=0))
+  print('get ocim dic')
+  dicinv['obs_OCIM'] = []
+  # ocim starts from 1780. 1980 corresponds to 200 1994: 214: 2007:227
+  if cmip == 6:
+    dic = ocim['dicind'][214:228,...] #1994-2007
+  else:
+    # dic = ocim['dicind'][214:226,...] #1994-2005
+    dic = ocim['dicind'][214:228,...] #1994-2007
+  sdep = ocim['sdep'][:,0,0]
+  tmp2d = (dic[sl:,...].mean(axis=0)*sdep[:,None,None]*ocim['sarea'][None,:,:]*ocim['sGLB']).sum()/1e3*12/1e15
+  tmp2d0 = (dic[0:sf:,...].mean(axis=0)*sdep[:,None,None]*ocim['sarea'][None,:,:]*ocim['sGLB']).sum()/1e3*12/1e15
+  # tmp2d = ((dic[-1,...]-dic[0,...])*sdep[:,None,None]*ocim['sarea'][None,:,:]*ocim['sGLB']).sum()/1e3*12/1e15
+  # tmp2d0 = 0
+  # tmp2d0 = (dic[0:2:,...].mean(axis=0)*sdep[:,None,None]*ocim['sarea'][None,:,:]).sum()/1e3*12/1e15
+  print('OCIM total anthro carbon is ',tmp2d-tmp2d0)
+  dicinv['obs_OCIM'].append(tmp2d-tmp2d0)
+  tmp2e = (dic[sl:,...].mean(axis=0)*sdep[:,None,None]*ocim['sGLB']).sum(axis=0)/1e3
+  tmp2e0 = (dic[0:sf:,...].mean(axis=0)*sdep[:,None,None]*ocim['sGLB']).sum(axis=0)/1e3
+  print(tmp2e.shape)
+  if wrt is not None:
+    fname = 'cant_inv_OCIM.nc'
+    if os.path.isfile(fname) is False:
+      tonc_inv('cant_inv_OCIM.nc',ocim['slat'][:,0],ocim['slon'][0,:],tmp2e-tmp2e0)
+  for l,w in enumerate(regs):
+    print('now in '+w+' index '+str(l))
+    if w == 'sGLB':
+      tmp = ((dic[sl:,...].mean(axis=0))).mean(axis=(1,2))  
+      tmp0 = (dic[0,...]).mean(axis=(1,2))
+    else:
+      tmp = ((dic[sl:,...].mean(axis=0))*ocim[w]).mean(axis=(1,2))  
+      tmp0 = (dic[0,...]*ocim[w]).mean(axis=(1,2))
+      tmp2d = (dic[sl:,...].mean(axis=0)*sdep[:,None,None]*ocim['sarea'][None,:,:]*ocim[w]).sum()/1e3*12/1e15
+      tmp2d0 = (dic[0:sf,...].mean(axis=0)*sdep[:,None,None]*ocim['sarea'][None,:,:]*ocim[w]).sum()/1e3*12/1e15
+      # tmp2d = ((dic[-1,...]-dic[0,...])*sdep[:,None,None]*ocim['sarea'][None,:,:]*ocim[w]).sum()/1e3*12/1e15
+      # tmp2d0 = 0
+      # tmp2d0 = (dic[0:2,...].mean(axis=0)*sdep[:,None,None]*ocim['sarea'][None,:,:]*ocim[w]).sum()/1e3*12/1e15
+      dicinv['obs_OCIM'].append(tmp2d-tmp2d0)
+    ax[l].plot(tmp-tmp0,-1*ocim['slev'][:,0,0],label='OCIM',linewidth=2,color='k')
+  print('get gruber dic')
+  dicinv['obs_Gruber']=[33.7,7.1,13.2,11.9]
+  if wrt is not None:
+    fname = 'cant_inv_Gruber.nc'
+    if os.path.isfile(fname) is False:
+      tonc_inv(fname,ocim['slat'][:,0],ocim['slon'][0,:],ogru['dicinv'])
+  dic = ogru['dissic']
+  for l,w in enumerate(regs):
+    print('now in '+w+' index '+str(l))
+    if w == 'sGLB':
+      tmp = dic.mean(axis=(1,2))
+    else:
+      tmp = (dic*ocim[w]).mean(axis=(1,2))  
+    ax[l].plot(tmp,-1*ogru['lev'],label='Gruber et al 2019',linewidth=2,color='k',linestyle='--')
+  for i in range(0,len(regs)):
+    ax[i].set_ylim([-5000,0])
+    ax[i].set_xlim([-1,15])
+    ax[i].title.set_text(regs[i][1:])
+  ax[3].legend(loc=0)
+  plt.show(block=False)
+
+  return fig,dicinv,enxy
